@@ -1,0 +1,65 @@
+import type { Metadata } from "next";
+import { getDict } from "@/lib/i18n";
+import { Header } from "@/components/Header";
+import { orgJsonLd, webSiteJsonLd, breadcrumbJsonLd } from "@/lib/seo";
+import { Sidebar } from "@/components/Sidebar";
+import RightRail from "@/components/RightRail";
+import Breadcrumbs from "@/components/Breadcrumbs";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+
+  // "ja" | "en" に絞り込んだ UI 用ロケール
+  const uiLocale: "ja" | "en" = locale === "en" ? "en" : "ja";
+
+  const dict = await getDict(uiLocale);
+  return { title: dict.site.title };
+}
+
+export default async function Layout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  // Next.js 側は string だが、UI 用には "ja" | "en" に正規化
+  const uiLocale: "ja" | "en" = locale === "en" ? "en" : "ja";
+
+  const dict = await getDict(uiLocale);
+
+  return (
+    <>
+      {/* ヘッダー（言語切り替えなどに uiLocale を使用） */}
+      <Header locale={uiLocale} dict={dict} />
+
+      <div className="container-pro">
+        <div className="site-grid">
+          {/* 左サイドバー（グローバルナビ） */}
+          <aside className="left-rail">
+            <div className="sticky-rail">
+              <Sidebar locale={uiLocale} dict={dict} />
+            </div>
+          </aside>
+
+          {/* メインコンテンツ */}
+          <main>
+            <div className="py-5">
+              <Breadcrumbs locale={uiLocale} />
+              {children}
+            </div>
+          </main>
+
+          {/* 右サイドバー（サイト概要・公式リンクなど） */}
+          <RightRail locale={uiLocale} />
+        </div>
+      </div>
+    </>
+  );
+}

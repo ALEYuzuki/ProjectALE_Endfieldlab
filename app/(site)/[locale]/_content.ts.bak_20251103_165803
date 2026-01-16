@@ -1,0 +1,8 @@
+import { sanityClient } from "@/lib/sanity";
+/** fetch first doc by _type */
+export async function getDocByType(type: string) {
+  return (sanityClient as any).fetch(
+    `*[_type==$type][0]{_id,title,body,publishedAt,ogTitle,ogDescription,ogImage}`,
+    { type }
+  );
+}

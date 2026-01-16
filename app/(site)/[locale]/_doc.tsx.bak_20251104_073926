@@ -1,0 +1,22 @@
+export async function DocSection(opts: {
+  locale: string;
+  titleJa: string;
+  jaType: string;
+  enType: string;
+}) {
+  const { locale, titleJa, jaType, enType } = opts;
+  const type = locale === "en" ? enType : jaType;
+
+  const { getOptionalDocByType } = await import("./_content");
+  const doc = await getOptionalDocByType(type);
+  const { RichText } = await import("@/components/RichText");
+
+  return (
+    <article>
+      <h1 style={{fontSize:"1.6rem",marginBottom:12}}>{titleJa}</h1>
+      {doc?.body
+        ? /* @ts-expect-error Server Component child */ <RichText value={doc.body}/>
+        : <div style={{opacity:.7}}>このセクションにはまだコンテンツが登録されていません。</div>}
+    </article>
+  );
+}

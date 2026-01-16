@@ -1,0 +1,40 @@
+import { getDocByType } from "../../_content";
+import { RichText } from "@/components/RichText";
+
+type Params = { locale: string };
+
+const TYPE_BY_LOCALE: Record<string, string> = {
+  ja: "policy_ads_ja",
+  en: "policy_ads_en",
+};
+
+export default async function Page({ params }: { params: Promise<Params> }) {
+  const { locale } = await params;
+  const base = (locale || "ja").split("-")[0] as "ja" | "en";
+  const type = TYPE_BY_LOCALE[base] ?? "policy_ads_en";
+
+  const doc: any = await getDocByType(type);
+  const title: string = doc?.title ?? (base === "ja" ? "広告ガイドライン" : "Advertising Policy");
+  const desc: string | null = doc?.description ?? null;
+  const pt = doc?.content ?? doc?.body ?? null;
+
+  return (
+    <article className="space-y-6">
+      <header className="border-b border-neutral-800 pb-3">
+        <h1 className="text-xl font-bold">{title}</h1>
+        {desc && <p className="text-sm text-neutral-400 mt-1">{desc}</p>}
+      </header>
+
+      {pt ? (
+        // @ts-expect-error Server Component child
+        <RichText value={pt} />
+      ) : (
+        <div className="opacity-70 text-sm">
+          {base === "ja"
+            ? <>Sanity Studioで <code>_type: policy_ads_ja / policy_ads_en</code> の本文（content/body）を入力してください。</>
+            : <>Please add <code>_type: policy_ads_en / policy_ads_ja</code> content in Sanity.</>}
+        </div>
+      )}
+    </article>
+  );
+}

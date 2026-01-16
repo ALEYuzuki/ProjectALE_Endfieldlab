@@ -1,0 +1,13 @@
+import { DocSection } from "../../_doc";
+
+
+import { getDocByType } from "../../_content";
+export default async function Page({ params }:{ params: Promise<{locale:string}> }) {
+  const { locale } = await params;
+  return DocSection({
+    locale,
+    titleJa: "郢敖郢晢ｽ｡郢晢ｽｼ郢ｧ・ｸ髫ｪ閧ｲ・ｮ諤懶ｽｼ繝ｻ,
+    jaType: "research_calc_ja",
+    enType: "research_calc_en"
+  });
+}

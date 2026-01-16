@@ -1,0 +1,11 @@
+import { DocSection } from "../../_doc";
+
+export default async function Page({ params }:{ params: Promise<{locale:string}> }) {
+  const { locale } = await params;
+  return DocSection({
+    locale,
+    titleJa: "小型",
+    jaType: "enemies_small_ja",
+    enType: "enemies_small_en"
+  });
+}

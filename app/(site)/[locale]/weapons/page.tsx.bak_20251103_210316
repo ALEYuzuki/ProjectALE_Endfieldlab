@@ -1,0 +1,24 @@
+import Link from "next/link";
+import { getDict, t } from "@/lib/i18n";
+
+export default async function WeaponsIndex({ params }: { params: { locale: string } }) {
+  const dict = await getDict(params.locale as any);
+  const base = `/${params.locale}/weapons`;
+  const items = [
+    { href: `${base}/skills`, label: t(dict, "menu.weaponSkills") },
+    { href: `${base}/traits`, label: t(dict, "menu.traits") },
+  ];
+  return (
+    <section className="space-y-4">
+      <h1 className="text-lg font-semibold">{t(dict, "menu.weapons")}</h1>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {items.map((it) => (
+          <Link key={it.href} href={it.href} className="card hover:bg-neutral-900/60">
+            <div className="font-medium">{it.label}</div>
+            <div className="text-xs text-neutral-400 mt-1">Coming soon...</div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}

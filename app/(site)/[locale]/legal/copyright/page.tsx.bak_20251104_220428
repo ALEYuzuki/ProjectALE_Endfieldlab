@@ -1,0 +1,70 @@
+// app/(site)/[locale]/legal/copyright/page.tsx
+import { getDocByType } from "../../_content";
+import { RichText } from "@/components/RichText";
+
+type Params = { locale: string };
+
+// NOTE: あなたのSanityスキーマに合わせたtype名へマッピング
+const TYPE_BY_LOCALE: Record<string, string> = {
+  ja: "policy_copyright_ja",
+  en: "policy_copyright_en",
+};
+
+export default async function Page({
+  params,
+}: {
+  // 既存の書き方に合わせて Promise を維持（不要なら { locale }: Params にしてOK）
+  params: Promise<Params>;
+}) {
+  const { locale } = await params;
+  const base = (locale || "ja").split("-")[0] as "ja" | "en";
+
+  // Sanityのtype名を決定（未知言語は英語へフォールバック）
+  const type = TYPE_BY_LOCALE[base] ?? "policy_copyright_en";
+
+  // あなたの getDocByType は type だけで先頭ドキュメントを返す想定
+  // 返却値に title / description / content / body のいずれかが含まれることを期待
+  const doc: any = await getDocByType(type);
+
+  // タイトル・本文・説明の優先順位を決めて抽出
+  const title: string =
+    doc?.title ??
+    (base === "ja" ? "著作権・通報（DMCA等）" : "Copyright / DMCA");
+  const desc: string | null = doc?.description ?? null;
+  const pt = doc?.content ?? doc?.body ?? null; // Portable Text（どちらか入っていればOK）
+
+  return (
+    <article className="space-y-6">
+      <header className="border-b border-neutral-800 pb-3">
+        <h1 className="text-xl font-bold">{title}</h1>
+        {desc ? (
+          <p className="text-sm text-neutral-400 mt-1">{desc}</p>
+        ) : null}
+      </header>
+
+      {pt ? (
+        // @ts-expect-error Server Component child
+        <RichText value={pt} />
+      ) : (
+        <div className="opacity-70 text-sm">
+          {base === "ja" ? (
+            <>
+              このセクションにはまだコンテンツが登録されていません。<br />
+              Sanity Studioで{" "}
+              <code>_type: policy_copyright_ja</code> /
+              <code>policy_copyright_en</code> のドキュメントを作成し、本文（content または body）を入力してください。
+            </>
+          ) : (
+            <>
+              No content yet.<br />
+              In Sanity Studio, create a document with{" "}
+              <code>_type: policy_copyright_en</code> (or{" "}
+              <code>policy_copyright_ja</code>) and fill{" "}
+              <code>content</code> or <code>body</code>.
+            </>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}

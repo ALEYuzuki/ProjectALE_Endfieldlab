@@ -1,0 +1,55 @@
+import type { Metadata } from "next";
+import { getDict } from "@/lib/i18n";
+import { Header } from "@/components/Header";
+import { orgJsonLd, webSiteJsonLd, breadcrumbJsonLd } from "@/lib/seo";import { Sidebar } from "@/components/Sidebar";
+import RightRail from "@/components/RightRail";;
+import Breadcrumbs from "@/components/Breadcrumbs";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const dict = await getDict(locale as any);
+  return { title: dict.site.title };
+}
+
+export default async function Layout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: "ja" | "en" }>;
+}) {
+  const { locale } = await params;
+  const dict = await getDict(locale as any);
+
+  return (
+    <>
+      <Header locale={locale} dict={dict} />
+
+      <div className="container-pro">
+        <div className="site-grid">
+          {/* 陝ｾ・ｦ繝ｻ螢ｹ縺礼ｹｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ繝ｻ閧ｲ・ｮ・ｱ+陷茨ｽｨ鬯ｮ繝ｻ/ 驍ｱ繝ｻ驕擾ｽｭ邵ｺ繝ｻ・ｽ・ｱ 邵ｺ・ｯCSS繝ｻ繝ｻ*/}
+          <aside className="left-rail">
+            <div className="sticky-rail">
+              <Sidebar locale={locale} dict={dict} />
+            </div>
+          </aside>
+
+          {/* 闕ｳ・ｭ陞滂ｽｮ繝ｻ螢ｽ謔ｽ隴√・*/}
+          <main>
+            <div className="py-5">
+              <Breadcrumbs locale={locale} />
+              {children}
+            </div>
+          </main>
+
+          {/* 陷ｿ・ｳ繝ｻ螢ｽ繝･陜｣・ｱ郢晢ｽｬ郢晢ｽｼ郢晢ｽｳ繝ｻ繝ｻ200px闔会ｽ･闕ｳ鄙ｫ縲帝勗・ｨ驕会ｽｺ繝ｻ繝ｻ*/}
+          <RightRail locale={locale} />
+        </div>
+      </div>
+    </>
+  );
+}

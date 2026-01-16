@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://endfield.lab.example
+
+# Sitemaps
+Sitemap: https://endfield.lab.example/sitemap.xml

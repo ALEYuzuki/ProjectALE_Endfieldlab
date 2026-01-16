@@ -1,0 +1,22 @@
+export async function DocSection(opts: {
+  locale: string;
+  titleJa: string;
+  jaType: string;
+  enType: string;
+}) {
+  const { locale, titleJa, jaType, enType } = opts;
+  const type = locale === "en" ? enType : jaType;
+
+  const { getOptionalDocByType } = await import("./_content");
+  const doc = await getOptionalDocByType(type);
+  const { RichText } = await import("@/components/RichText");
+
+  return (
+    <article>
+      <h1 style={{fontSize:"1.6rem",marginBottom:12}}>{titleJa}</h1>
+      {doc?.body
+        ? <RichText value={doc.body}/>
+        : <div style={{opacity:.7}}>縺薙・繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｫ縺ｯ縺ｾ縺繧ｳ繝ｳ繝・Φ繝・′逋ｻ骭ｲ縺輔ｌ縺ｦ縺・∪縺帙ｓ縲・/div>}
+    </article>
+  );
+}
