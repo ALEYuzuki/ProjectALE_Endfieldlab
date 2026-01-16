@@ -3,21 +3,23 @@ import { qListByType } from "@/lib/sanity.queries";
 import { ZListItem } from "@/lib/zod";
 import PageHeader from "@/components/PageHeader";
 import ItemCard from "@/components/ItemCard";
+import { z } from "zod";
 
 type Params = Promise<{ locale: "ja" | "en" }>;
 
-// ✅ Zodから「1件の型」を取り出して、listの型を確定させる
-type ListItem = ZListItem["_type"];
+// ✅ Zod schema から TS 型を生成（これが正解）
+type ListItem = z.infer<typeof ZListItem>;
 
 export default async function IndexPage({ params }: { params: Params }) {
   const { locale } = await params;
+
   const base = (key: string) => (locale === "ja" ? `${key}_ja` : `${key}_en`);
   const type = base("events");
 
   const raw = await sanityClient.fetch(qListByType, { type });
-  const parsed = ZListItem.array().safeParse(raw);
 
-  // ✅ 失敗時の [] でも型が ListItem[] になるように明示
+  // ✅ parse結果は ListItem[] に確定する
+  const parsed = ZListItem.array().safeParse(raw);
   const list: ListItem[] = parsed.success ? parsed.data : [];
 
   return (
@@ -33,17 +35,13 @@ export default async function IndexPage({ params }: { params: Params }) {
         </p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {list.map((it: ListItem) => (
+          {list.map((it) => (
             <ItemCard
               key={it._id}
               title={it.title}
               date={it._createdAt}
               excerpt={it.excerpt}
-              href={
-                it.slug
-                  ? `/${locale}/events/${encodeURIComponent(it.slug)}`
-                  : undefined
-              }
+              href={it.slug ? `/${locale}/events/${encodeURIComponent(it.slug)}` : undefined}
             />
           ))}
         </div>
