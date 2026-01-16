@@ -22,3 +22,7 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# backups
+*.bak
+*.bak_*
