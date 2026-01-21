@@ -1,65 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * 安全な i18n ミドルウェア
- * - 対応言語: ja / en
- * - 除外: /_next, /static, /images 等のアセット、/api、/studio
- * - 先頭に言語がなければ /ja を付けてリダイレクト
- * - 配列に .some() 等をかける前に Array.isArray で防御
+ * i18n middleware (optimized)
+ * - Supported: ja / en
+ * - Exclude: /api, /studio, /_next, sitemap/robots/favicon, static asset dirs
+ * - If locale missing:
+ *    - "/" only: rewrite to "/ja" (no extra round trip)
+ *    - other paths: redirect to "/ja/<path>" (URL is normalized)
  */
 
 const SUPPORTED_LOCALES = ["ja", "en"] as const;
 type Locale = (typeof SUPPORTED_LOCALES)[number];
 
-function getLocaleFromPath(pathname: string): Locale | null {
-  const seg = pathname.split("/").filter(Boolean)[0];
-  if (!seg) return null;
-  return (SUPPORTED_LOCALES as readonly string[]).includes(seg) ? (seg as Locale) : null;
-}
+const DEFAULT_LOCALE: Locale = "ja";
 
-function isExcludedPath(pathname: string): boolean {
-  // 静的アセットやAPI、Studioは除外
-  const EXCLUDES = [
-    "/api",
-    "/studio",
-    "/_next",
-    "/favicon.ico",
-    "/robots.txt",
-    "/sitemap.xml",
-    "/static",
-    "/images",
-    "/assets"
-  ];
-  // ここで .some() を使う前に必ず配列チェック
-  if (!Array.isArray(EXCLUDES)) return false;
-  return EXCLUDES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+// RegExp は毎回生成しない（軽量化）
+const FILE_EXT_RE = /\.[a-zA-Z0-9]+$/;
+const MULTI_SLASH_RE = /\/{2,}/g;
+
+function getLocaleFromPathname(pathname: string): Locale | null {
+  // split を避けて startsWith で判定（割と効く）
+  for (const l of SUPPORTED_LOCALES) {
+    if (pathname === `/${l}` || pathname.startsWith(`/${l}/`)) return l;
+  }
+  return null;
 }
 
 export function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const url = req.nextUrl;
+  const { pathname } = url;
 
-  // 除外対象は素通し
-  if (isExcludedPath(pathname) || /\.[a-zA-Z0-9]+$/.test(pathname)) {
-    return NextResponse.next();
+  // 念のため：拡張子付きは素通し（matcherでも大半は除外済み）
+  if (FILE_EXT_RE.test(pathname)) return NextResponse.next();
+
+  // すでに /ja or /en なら何もしない
+  if (getLocaleFromPathname(pathname)) return NextResponse.next();
+
+  // 1) ルート "/" は rewrite にして“往復ゼロ”
+  //    -> Google検索結果から / を踏んだときの「移動開始が遅い」を削りやすい
+  if (pathname === "/") {
+    const rewriteUrl = url.clone();
+    rewriteUrl.pathname = `/${DEFAULT_LOCALE}`;
+    return NextResponse.rewrite(rewriteUrl);
   }
 
-  // すでに言語セグメントがあるか？
-  const current = getLocaleFromPath(pathname);
-  if (current) {
-    return NextResponse.next();
-  }
+  // 2) それ以外はURLを /ja/<path> に統一（SEO的にURLを揃える）
+  //    - // を正規化
+  //    - クエリは url に残っているので触らなくてOK
+  const normalized = pathname.replace(MULTI_SLASH_RE, "/");
+  const redirectUrl = url.clone();
+  redirectUrl.pathname = `/${DEFAULT_LOCALE}${normalized.startsWith("/") ? normalized : `/${normalized}`}`;
 
-  // ない場合は /ja へ付け替え
-  const url = req.nextUrl.clone();
-  // 先頭/重複スラッシュを吸収
-  const normalized = (pathname || "/").replace(/\/{2,}/g, "/");
-  url.pathname = `/ja${normalized === "/" ? "" : normalized}`;
-  // 検索クエリは維持
-  url.search = search || "";
-  return NextResponse.redirect(url);
+  // 308 = 恒久リダイレクト（/ja が固定ならこちらが無難）
+  return NextResponse.redirect(redirectUrl, 308);
 }
 
-// _next などを自動で除外する matcher（静的ファイルを避ける）
 export const config = {
-  matcher: ["/((?!_next/|.*\\..*).*)"]
+  matcher: [
+    /**
+     * 重要：middleware が “無駄に” 走らないように除外を matcher 側に寄せる
+     * - api / studio / _next
+     * - favicon, robots, sitemap（sitemap-0.xml なども）
+     * - 静的っぽいディレクトリ
+     * - 拡張子付き全般
+     */
+    "/((?!api|studio|_next|favicon\\.ico|robots\\.txt|sitemap\\.xml|sitemap-.*\\.xml|static|images|assets|.*\\..*).*)",
+  ],
 };
