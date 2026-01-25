@@ -78,11 +78,14 @@ export default function SearchBox({ locale, placeholder, className }: Props) {
       setLoading(true);
       try {
         // ✅ あなたの /api/search は { items: [...] } を返す想定
-        const res = await fetch(`/api/search?locale=${encodeURIComponent(baseLocale)}`, {
-          cache: "force-cache",
-        });
+        const res = await fetch(
+          `/api/search?locale=${encodeURIComponent(baseLocale)}`,
+          { cache: "force-cache" }
+        );
         const json = await res.json();
-        const list = Array.isArray(json) ? (json as IndexItem[]) : (json.items as IndexItem[]);
+        const list = Array.isArray(json)
+          ? (json as IndexItem[])
+          : (json.items as IndexItem[]);
 
         if (!cancelled) {
           setItems(list);
@@ -159,10 +162,11 @@ export default function SearchBox({ locale, placeholder, className }: Props) {
               {results.map((r) => {
                 const basePath = TYPE_TO_PATH[r.type];
                 const href = `/${baseLocale}/${basePath}/${r.slug}`;
+
                 return (
                   <li key={`${r.type}:${r.slug}`}>
                     <Link
-                      href={href}
+                      href={{ pathname: href }} // ✅ typed routes 対応：stringではなくUrlObject
                       prefetch={false}
                       className="block px-3 py-2 hover:bg-neutral-900/60 transition"
                       onClick={() => setOpen(false)}

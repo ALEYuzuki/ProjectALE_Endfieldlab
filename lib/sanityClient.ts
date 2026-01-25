@@ -1,4 +1,4 @@
-﻿// sanityClient.ts
+﻿// lib/sanityClient.ts
 import { createClient } from "next-sanity";
 import { createImageUrlBuilder } from "@sanity/image-url";
 
@@ -10,7 +10,7 @@ export const sanityClient = createClient({
   projectId,
   dataset,
   apiVersion,
-  useCdn: true, // ← 画像読み込みでは true 推奨
+  useCdn: true,
   perspective: "published",
 });
 
