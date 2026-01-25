@@ -1,32 +1,29 @@
-"use client";
-
+// app/(site)/[locale]/page.tsx
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import Fuse from "fuse.js";
-import clsx from "clsx";
+import groq from "groq";
 
-type IndexItem = {
-  type: "news" | "research" | "event" | "update";
-  title: string;
-  slug: string;
+import { getDict } from "@/lib/i18n";
+import { sanityClient } from "@/lib/sanityClient";
+import {
+  getLang,
+  getSiteUrl,
+  getLocaleBaseUrl,
+  webPageJsonLd,
+  breadcrumbJsonLd,
+  toJsonLdHtml,
+} from "@/lib/seo";
+
+// ✅ ホームはISR（まずは5分）
+export const revalidate = 300;
+
+type ListItem = {
+  title?: string;
+  slug?: string;
   date?: string;
   excerpt?: string;
 };
 
-type Props = {
-  locale: string;
-  placeholder?: string;
-  className?: string;
-};
-
-const TYPE_TO_PATH: Record<IndexItem["type"], string> = {
-  news: "news",
-  research: "research",
-  event: "events",
-  update: "updates",
-};
-
-function formatDate(iso?: string, locale?: string) {
+function formatDate(iso?: string, locale?: "ja" | "en") {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -37,157 +34,164 @@ function formatDate(iso?: string, locale?: string) {
   });
 }
 
-export default function SearchBox({ locale, placeholder, className }: Props) {
-  const baseLocale = (locale || "ja").split("-")[0];
-  const [q, setQ] = useState("");
-  const [items, setItems] = useState<IndexItem[] | null>(null);
-  const [results, setResults] = useState<IndexItem[]>([]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+function label(locale: "ja" | "en", ja: string, en: string) {
+  return locale === "en" ? en : ja;
+}
 
-  const boxRef = useRef<HTMLDivElement | null>(null);
-
-  const fuse = useMemo(() => {
-    if (!items?.length) return null;
-    return new Fuse(items, {
-      keys: [
-        { name: "title", weight: 0.75 },
-        { name: "excerpt", weight: 0.25 },
-      ],
-      threshold: 0.35,
-      ignoreLocation: true,
-      minMatchCharLength: 2,
-    });
-  }, [items]);
-
-  // インデックス取得（sessionStorageキャッシュ）
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      const key = `search-index:${baseLocale}`;
-      const cached = sessionStorage.getItem(key);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached) as IndexItem[];
-          if (!cancelled) setItems(parsed);
-          return;
-        } catch {}
-      }
-
-      setLoading(true);
-      try {
-        // ✅ /api/search は { items: [...] } を返す想定（配列直返しにも対応）
-        const res = await fetch(`/api/search?locale=${encodeURIComponent(baseLocale)}`, {
-          cache: "force-cache",
-        });
-        const json = await res.json();
-        const list = Array.isArray(json) ? (json as IndexItem[]) : (json.items as IndexItem[]);
-
-        if (!cancelled) {
-          setItems(list);
-          sessionStorage.setItem(key, JSON.stringify(list));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    if (!items) load();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseLocale, items]);
-
-  // debounce検索
-  useEffect(() => {
-    const qq = q.trim();
-    if (!qq) {
-      setResults([]);
-      return;
-    }
-    const id = window.setTimeout(() => {
-      if (!fuse) return;
-      const out = fuse.search(qq).slice(0, 12).map((r) => r.item);
-      setResults(out);
-    }, 150);
-
-    return () => window.clearTimeout(id);
-  }, [q, fuse]);
-
-  // 外クリックで閉じる
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      const el = boxRef.current;
-      if (!el) return;
-      if (!el.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  const showPanel = open && q.trim().length >= 1;
+function CardList({
+  locale,
+  basePath,
+  items,
+  emptyText,
+}: {
+  locale: "ja" | "en";
+  basePath: "news" | "research" | "events" | "updates";
+  items: ListItem[];
+  emptyText: string;
+}) {
+  if (!items?.length) {
+    return (
+      <div className="h-40 rounded-lg bg-neutral-900/60 border border-neutral-800/60 flex items-center justify-center text-sm text-neutral-500">
+        {emptyText}
+      </div>
+    );
+  }
 
   return (
-    <div ref={boxRef} className={clsx("relative", className)}>
-      <div className="relative">
-        <span className="input-icon">🔍</span>
-        <input
-          className="input has-icon text-sm w-full"
-          placeholder={placeholder ?? "Search"}
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          autoComplete="off"
-          name="q"
-        />
-      </div>
+    <div className="mt-3 space-y-2">
+      {items.map((it, idx) => {
+        const title = it.title ?? "(no title)";
+        const date = formatDate(it.date, locale);
+        const slug = it.slug; // ✅ ここで取り出すと型が安定する
 
-      {showPanel && (
-        <div className="absolute z-50 mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-950 shadow-lg overflow-hidden">
-          <div className="px-3 py-2 text-xs text-neutral-500 border-b border-neutral-800">
-            {loading ? "Loading..." : items ? `${items.length} items` : "No index"}
+        const content = (
+          <div className="p-3">
+            <div className="text-sm font-medium text-neutral-100">{title}</div>
+            {date ? <div className="mt-1 text-xs text-neutral-500">{date}</div> : null}
+            {it.excerpt ? (
+              <div className="mt-2 text-xs text-neutral-400 line-clamp-2">
+                {it.excerpt}
+              </div>
+            ) : null}
           </div>
+        );
 
-          {results.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-neutral-500">
-              {q.trim().length < 2 ? "Type 2+ characters" : "No results"}
+        const className =
+          "block rounded-md border border-neutral-800/60 bg-neutral-900/40 hover:bg-neutral-900/70 transition";
+
+        // ✅ slugが無いものはリンクにしない（壊れたURLを作らない）
+        if (!slug) {
+          return (
+            <div key={`${title}-${idx}`} className={className}>
+              {content}
             </div>
-          ) : (
-            <ul className="max-h-[360px] overflow-auto">
-              {results.map((r) => {
-                const basePath = TYPE_TO_PATH[r.type];
-                const href = `/${baseLocale}/${basePath}/${r.slug}`;
+          );
+        }
 
-                return (
-                  <li key={`${r.type}:${r.slug}`}>
-                    <Link
-                      href={href as any} // ✅ typed routes 回避（動的URLなので必要）
-                      prefetch={false}
-                      className="block px-3 py-2 hover:bg-neutral-900/60 transition"
-                      onClick={() => setOpen(false)}
-                    >
-                      <div className="text-sm text-neutral-100">{r.title}</div>
-                      <div className="mt-0.5 text-xs text-neutral-500 flex gap-2">
-                        <span className="uppercase">{r.type}</span>
-                        <span>{formatDate(r.date, baseLocale)}</span>
-                      </div>
-                      {r.excerpt ? (
-                        <div className="mt-1 text-xs text-neutral-400 line-clamp-2">
-                          {r.excerpt}
-                        </div>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
+        const href = `/${locale}/${basePath}/${slug}`;
+
+        // ✅ typed routes で string が弾かれるのを避ける：UrlObject を渡す
+        return (
+          <Link
+            key={slug}
+            href={{ pathname: href }}
+            prefetch={false}
+            className={className}
+          >
+            {content}
+          </Link>
+        );
+      })}
     </div>
+  );
+}
+
+// ✅ Next 15.5: PageProps helper（グローバル）で props を一致させる
+export default async function Home(props: PageProps<"/[locale]">) {
+  const { locale } = await props.params;
+  const uiLocale: "ja" | "en" = locale === "en" ? "en" : "ja";
+  const dict = await getDict(uiLocale);
+
+  const siteUrl = getSiteUrl();
+  const lang = getLang(locale);
+  const localeBase = getLocaleBaseUrl(siteUrl, lang);
+
+  const homeUrl = `${localeBase}/`;
+  const pageName = dict.site.title ?? "ProjectALE EndfieldLab";
+
+  const homeJsonLd = [
+    webPageJsonLd({ pageUrl: homeUrl, pageName, lang, siteUrl }),
+    breadcrumbJsonLd([{ name: label(uiLocale, "ホーム", "Home"), url: homeUrl }], { lang }),
+  ].filter(Boolean);
+
+  // ✅ locale別 Sanity type（あなたの /api/search と合わせる）
+  const newsType = uiLocale === "ja" ? "news_ja" : "news_en";
+  const eventsType = uiLocale === "ja" ? "events_ja" : "events_en";
+  const researchType = uiLocale === "ja" ? "research_ja" : "research_en";
+  const updatesType = uiLocale === "ja" ? "updates_ja" : "updates_en"; // 無ければ空でOK
+
+  const qList = groq`*[_type == $type] | order(coalesce(publishedAt, startAt, _createdAt) desc)[0...5]{
+    "title": title,
+    "slug": slug.current,
+    "date": coalesce(publishedAt, startAt, _createdAt),
+    "excerpt": excerpt
+  }`;
+
+  const [latestNews, research, events, updates] = await Promise.all([
+    sanityClient.fetch<ListItem[]>(
+      qList,
+      { type: newsType },
+      { next: { tags: [`home:${uiLocale}`, `news:${uiLocale}`], revalidate: 300 } }
+    ),
+    sanityClient.fetch<ListItem[]>(
+      qList,
+      { type: researchType },
+      { next: { tags: [`home:${uiLocale}`, `research:${uiLocale}`], revalidate: 300 } }
+    ),
+    sanityClient.fetch<ListItem[]>(
+      qList,
+      { type: eventsType },
+      { next: { tags: [`home:${uiLocale}`, `events:${uiLocale}`], revalidate: 300 } }
+    ),
+    sanityClient.fetch<ListItem[]>(
+      qList,
+      { type: updatesType },
+      { next: { tags: [`home:${uiLocale}`, `updates:${uiLocale}`], revalidate: 300 } }
+    ),
+  ]);
+
+  const emptyText = label(uiLocale, "準備中", "Coming soon");
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: toJsonLdHtml(homeJsonLd) }}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="card md:col-span-1">
+          <h2 className="card-title">{label(uiLocale, "最新ニュース", "Latest News")}</h2>
+          <CardList locale={uiLocale} basePath="news" items={latestNews ?? []} emptyText={emptyText} />
+        </section>
+
+        <section className="card md:col-span-1">
+          <h2 className="card-title">{label(uiLocale, "検証情報", "Research")}</h2>
+          <CardList locale={uiLocale} basePath="research" items={research ?? []} emptyText={emptyText} />
+        </section>
+
+        <section className="card md:col-span-1">
+          <h2 className="card-title">{label(uiLocale, "開催中イベント", "Active Events")}</h2>
+          <CardList locale={uiLocale} basePath="events" items={events ?? []} emptyText={emptyText} />
+        </section>
+
+        <section className="card md:col-span-1">
+          <h2 className="card-title">{label(uiLocale, "アップデート情報", "Updates")}</h2>
+          <CardList locale={uiLocale} basePath="updates" items={updates ?? []} emptyText={emptyText} />
+        </section>
+
+        {/* 広告スペース（仮）は表示しない */}
+      </div>
+    </>
   );
 }
