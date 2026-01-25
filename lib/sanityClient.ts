@@ -1,6 +1,6 @@
 ﻿// sanityClient.ts
 import { createClient } from "next-sanity";
-import imageUrlBuilder from "@sanity/image-url";
+import { createImageUrlBuilder } from "@sanity/image-url";
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!;
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET!;
@@ -14,7 +14,8 @@ export const sanityClient = createClient({
   perspective: "published",
 });
 
-const builder = imageUrlBuilder(sanityClient);
+// ✅ default import廃止 → named exportに変更
+const builder = createImageUrlBuilder(sanityClient);
 
 /**
  * Sanity 画像オブジェクトから URL を生成するヘルパー
