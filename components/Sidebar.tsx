@@ -14,6 +14,7 @@ const buildMenu = (locale: string): Item[] => [
   { href: `/${locale}`, i18n: "menu.home" },
   { href: `/${locale}/news`, i18n: "menu.news" },
   { href: `/${locale}/events`, i18n: "menu.events" },
+  { href: `/${locale}/tools/damage-calculator`, i18n: "menu.damage_calculator" },
 
   // 検証情報（見出しページに直リンク + 子）
   {
