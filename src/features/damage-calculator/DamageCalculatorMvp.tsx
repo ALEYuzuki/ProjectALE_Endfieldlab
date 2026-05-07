@@ -84,8 +84,8 @@ export default function DamageCalculatorMvp({ locale }: Props) {
   const result = useMemo(() => calculateDamage(input), [input]);
 
   return (
-    <div className="mx-auto max-w-[1520px] bg-[#050a12] p-4 text-slate-100 md:p-6">
-      <header className="mb-4 border border-slate-600/60 bg-[#09111c] px-4 py-3 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.06)]">
+    <div className="mx-auto max-w-[1500px] bg-[#060b12] p-4 text-slate-100 md:p-6">
+      <header className="mb-4 border border-slate-700/60 bg-[#0a1019] px-4 py-3">
         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
           <div>
             <h1 className="text-lg font-semibold tracking-[0.18em] text-cyan-100 md:text-xl">ENDFIELD DAMAGE CALCULATOR / RESEARCH UI</h1>
@@ -107,7 +107,7 @@ export default function DamageCalculatorMvp({ locale }: Props) {
         </div>
       </header>
 
-      <div className="grid gap-2 xl:grid-cols-3">
+      <div className="grid gap-3 xl:grid-cols-3">
         <Panel title="CHARACTER / CORE STATUS">
           <NumberField label={isJa ? "キャラ基礎攻撃力" : "Character base ATK"} value={characterAtk} setValue={setCharacterAtk} />
           <NumberField label={isJa ? "武器攻撃力" : "Weapon ATK"} value={weaponAtk} setValue={setWeaponAtk} />
