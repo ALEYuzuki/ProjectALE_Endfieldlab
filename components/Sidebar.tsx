@@ -22,6 +22,7 @@ const buildMenu = (locale: string): Item[] => [
     children: [
       { href: `/${locale}/research/calc`, i18n: "menu.calc" }, // ダメージ計算式
       { href: `/${locale}/research/buffs`, i18n: "menu.buffs" }, // バフデバフ効果
+      { href: `/${locale}/tools/damage-calculator`, i18n: "menu.damage_calculator" }, // ダメージ計算機
     ],
   },
 
