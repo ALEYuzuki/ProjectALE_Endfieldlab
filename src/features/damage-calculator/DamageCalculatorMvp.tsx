@@ -14,6 +14,7 @@ import {
 import { damagePresets } from "@/src/data/damage/samplePresets";
 
 type Props = { locale: string };
+const FIELD_CLASS = "border border-slate-600 bg-[#07111a] text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none";
 
 const ENEMY_RANK_BASE: Record<Exclude<EnemyDefenseRank, "CUSTOM">, number> = {
   D: 0.5,
@@ -86,8 +87,8 @@ export default function DamageCalculatorMvp({ locale }: Props) {
   const result = useMemo(() => calculateDamage(input), [input]);
 
   return (
-    <div className="mx-auto max-w-[1440px] px-4 py-6 text-slate-100 md:px-8">
-      <div className="border border-slate-700 bg-slate-950/95 shadow-[0_0_0_1px_rgba(148,163,184,0.08)_inset]">
+    <div className="mx-auto max-w-[1500px] px-4 py-6 text-slate-100 md:px-8">
+      <div className="border border-slate-600 bg-[#03080f] shadow-[0_0_0_1px_rgba(125,147,173,0.12)_inset]">
         <header className="border-b border-slate-700 px-4 py-4 md:px-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -99,7 +100,7 @@ export default function DamageCalculatorMvp({ locale }: Props) {
             </div>
             <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-300">
               {["Chara", "Skill", "Enemy", "Buff", "Result"].map((tab) => (
-                <span key={tab} className="border border-slate-600 bg-slate-900/70 px-3 py-1">{tab}</span>
+                <span key={tab} className="border border-slate-600 bg-[#0b1623] px-3 py-1">{tab}</span>
               ))}
             </div>
           </div>
@@ -111,7 +112,7 @@ export default function DamageCalculatorMvp({ locale }: Props) {
             {damagePresets.map((preset) => (
               <button
                 key={preset.key}
-                className="border border-slate-600 bg-slate-900 px-3 py-1 text-xs text-slate-200 transition hover:border-sky-500 hover:text-sky-200"
+                className="border border-slate-600 bg-[#0b1623] px-3 py-1 text-xs text-slate-200 transition hover:border-cyan-400 hover:text-cyan-200"
                 onClick={() => applyPreset(preset.input)}
               >
                 {isJa ? preset.labelJa : preset.labelEn}
@@ -168,7 +169,7 @@ export default function DamageCalculatorMvp({ locale }: Props) {
             </div>
           </Panel>
 
-          <Panel className="md:col-span-4" title="Enemy / Buff Status" subtitle="Defense model and buckets">
+          <Panel className="md:col-span-4" title="Enemy Status" subtitle="Defense model and enemy-side modifiers">
             <div className="grid gap-3">
               <SelectField
                 label={isJa ? "敵防御ランク" : "Enemy defense rank"}
@@ -195,32 +196,41 @@ export default function DamageCalculatorMvp({ locale }: Props) {
                 </div>
               </label>
 
-              <div>
-                <p className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-400">Buff Bucket Editor</p>
-                <div className="space-y-2">
-                  {buckets.map((bucket, idx) => (
-                    <div key={bucket.id} className="grid grid-cols-12 gap-2 border border-slate-700 bg-slate-900/70 p-2">
-                      <input className="col-span-3 border border-slate-700 bg-slate-950 px-2 py-1 text-xs" value={bucket.label} onChange={(e) => updateBucket(idx, { label: e.target.value })} />
-                      <select className="col-span-4 border border-slate-700 bg-slate-950 px-2 py-1 text-xs" value={bucket.bucket} onChange={(e) => updateBucket(idx, { bucket: e.target.value as BuffBucketKey })}>
-                        <option value="atk_percent">atk_percent</option>
-                        <option value="damage_bonus">damage_bonus</option>
-                        <option value="elemental_damage_bonus">elemental_damage_bonus</option>
-                        <option value="skill_damage_bonus">skill_damage_bonus</option>
-                        <option value="enemy_damage_taken">enemy_damage_taken</option>
-                        <option value="final_multiplier">final_multiplier</option>
-                      </select>
-                      <input className="col-span-3 border border-slate-700 bg-slate-950 px-2 py-1 text-xs" type="number" step="0.01" value={bucket.value} onChange={(e) => updateBucket(idx, { value: Number(e.target.value) })} />
-                      <label className="col-span-2 flex items-center justify-center gap-1 border border-slate-700 bg-slate-950 text-[11px]">
-                        <input type="checkbox" checked={bucket.enabled} onChange={(e) => updateBucket(idx, { enabled: e.target.checked })} />ON
-                      </label>
-                    </div>
-                  ))}
+            </div>
+          </Panel>
+
+          <Panel className="md:col-span-12" title="Buff Status" subtitle="Bucket table for additive / multiplicative adjustments">
+            <div className="overflow-x-auto border border-slate-700">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-12 border-b border-slate-700 bg-[#091423] px-2 py-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                  <div className="col-span-1 text-center">ON</div>
+                  <div className="col-span-3">Name</div>
+                  <div className="col-span-4">Bucket</div>
+                  <div className="col-span-3">Value</div>
+                  <div className="col-span-1 text-center">Remove</div>
                 </div>
-                <div className="mt-2 flex gap-2">
-                  <button className="border border-slate-600 bg-slate-900 px-2 py-1 text-xs hover:border-sky-500" onClick={() => setBuckets((prev) => [...prev, { id: crypto.randomUUID(), label: "New Bucket", bucket: "damage_bonus", value: 0.1, enabled: true }])}>{isJa ? "bucket追加" : "Add bucket"}</button>
-                  <button className="border border-slate-600 bg-slate-900 px-2 py-1 text-xs hover:border-rose-500" onClick={() => setBuckets((prev) => prev.slice(0, -1))}>{isJa ? "最後を削除" : "Remove last"}</button>
-                </div>
+                {buckets.map((bucket, idx) => (
+                  <div key={bucket.id} className="grid grid-cols-12 items-center gap-2 border-b border-slate-800 bg-[#050d18] px-2 py-2 last:border-b-0">
+                    <label className="col-span-1 flex items-center justify-center">
+                      <input type="checkbox" checked={bucket.enabled} onChange={(e) => updateBucket(idx, { enabled: e.target.checked })} />
+                    </label>
+                    <input className={`col-span-3 ${FIELD_CLASS} px-2 py-1 text-xs`} value={bucket.label} onChange={(e) => updateBucket(idx, { label: e.target.value })} />
+                    <select className={`col-span-4 ${FIELD_CLASS} px-2 py-1 text-xs`} value={bucket.bucket} onChange={(e) => updateBucket(idx, { bucket: e.target.value as BuffBucketKey })}>
+                      <option className="bg-slate-900 text-slate-100" value="atk_percent">atk_percent</option>
+                      <option className="bg-slate-900 text-slate-100" value="damage_bonus">damage_bonus</option>
+                      <option className="bg-slate-900 text-slate-100" value="elemental_damage_bonus">elemental_damage_bonus</option>
+                      <option className="bg-slate-900 text-slate-100" value="skill_damage_bonus">skill_damage_bonus</option>
+                      <option className="bg-slate-900 text-slate-100" value="enemy_damage_taken">enemy_damage_taken</option>
+                      <option className="bg-slate-900 text-slate-100" value="final_multiplier">final_multiplier</option>
+                    </select>
+                    <input className={`col-span-3 ${FIELD_CLASS} px-2 py-1 text-xs`} type="number" step="0.01" value={bucket.value} onChange={(e) => updateBucket(idx, { value: Number(e.target.value) })} />
+                    <button className="col-span-1 border border-slate-600 bg-[#0b1623] px-1 py-1 text-[11px] text-slate-200 hover:border-rose-400 hover:text-rose-200" onClick={() => setBuckets((prev) => prev.filter((_, i) => i !== idx))}>×</button>
+                  </div>
+                ))}
               </div>
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button className="border border-slate-600 bg-[#0b1623] px-2 py-1 text-xs hover:border-cyan-400" onClick={() => setBuckets((prev) => [...prev, { id: crypto.randomUUID(), label: "New Bucket", bucket: "damage_bonus", value: 0.1, enabled: true }])}>{isJa ? "bucket追加" : "Add bucket"}</button>
             </div>
           </Panel>
         </main>
@@ -232,16 +242,11 @@ export default function DamageCalculatorMvp({ locale }: Props) {
             <p className="text-3xl font-bold text-emerald-200">{result.finalTotalDamage.toLocaleString()}</p>
           </div>
           <div className="grid gap-2 text-sm md:grid-cols-2 lg:grid-cols-5">
-            <Stat label="finalAtk" value={result.finalAtk.toFixed(4)} />
-            <Stat label="perHitMultiplier" value={result.perHitMultiplier.toFixed(4)} />
-            <Stat label="selfBuffMultiplier" value={result.selfBuffMultiplier.toFixed(4)} />
-            <Stat label="enemyCoefficientBeforeAdjustment" value={result.enemyCoefficientBeforeAdjustment.toFixed(4)} />
-            <Stat label="enemyCoefficientAfterAdjustment" value={result.enemyCoefficientAfterAdjustment.toFixed(4)} />
-            <Stat label="enemySideMultiplier" value={result.enemySideMultiplier.toFixed(4)} />
-            <Stat label="rawPerHitDamage" value={result.rawPerHitDamage.toFixed(4)} />
-            <Stat label="roundedPerHitDamage" value={result.roundedPerHitDamage.toFixed(4)} />
-            <Stat label="rawTotalDamage" value={result.rawTotalDamage.toFixed(4)} />
-            <Stat label="finalTotalDamage" value={result.finalTotalDamage.toFixed(4)} />
+            <Stat label="FINAL TOTAL DAMAGE" value={result.finalTotalDamage.toFixed(4)} />
+            <Stat label="PER HIT DAMAGE" value={result.roundedPerHitDamage.toFixed(4)} />
+            <Stat label="FINAL ATK" value={result.finalAtk.toFixed(4)} />
+            <Stat label="ENEMY COEFFICIENT" value={result.enemyCoefficientAfterAdjustment.toFixed(4)} />
+            <Stat label="SELF BUFF" value={result.selfBuffMultiplier.toFixed(4)} />
           </div>
           <div className="mt-3 border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-300 whitespace-pre-wrap">
             <div className="mb-1 text-[11px] uppercase tracking-[0.16em] text-slate-400">formulaText</div>
@@ -284,7 +289,7 @@ export default function DamageCalculatorMvp({ locale }: Props) {
 
 function Panel({ title, subtitle, className = "", children }: { title: string; subtitle: string; className?: string; children: React.ReactNode }) {
   return (
-    <section className={`border border-slate-700 bg-slate-900/50 p-3 ${className}`}>
+    <section className={`border border-slate-700 bg-[#050d18] p-3 ${className}`}>
       <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">{title}</p>
       <p className="mb-3 mt-1 text-xs text-slate-500">{subtitle}</p>
       {children}
@@ -296,7 +301,7 @@ function NumberField({ label, value, setValue, step = 1 }: { label: string; valu
   return (
     <label className="text-xs">
       <div className="mb-1 text-slate-400">{label}</div>
-      <input className="w-full border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm" type="number" step={step} value={value} onChange={(e) => setValue(Number(e.target.value))} />
+      <input className={`${FIELD_CLASS} w-full px-2 py-1.5 text-sm`} type="number" step={step} value={value} onChange={(e) => setValue(Number(e.target.value))} />
     </label>
   );
 }
@@ -305,7 +310,7 @@ function TextNumberField({ label, value, setValue }: { label: string; value: str
   return (
     <label className="text-xs">
       <div className="mb-1 text-slate-400">{label}</div>
-      <input className="w-full border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm" type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="(optional)" />
+      <input className={`${FIELD_CLASS} w-full px-2 py-1.5 text-sm`} type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="(optional)" />
     </label>
   );
 }
@@ -314,13 +319,18 @@ function SelectField({ label, value, setValue, options }: { label: string; value
   return (
     <label className="text-xs">
       <div className="mb-1 text-slate-400">{label}</div>
-      <select className="w-full border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm" value={value} onChange={(e) => setValue(e.target.value)}>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      <select className={`${FIELD_CLASS} w-full px-2 py-1.5 text-sm`} value={value} onChange={(e) => setValue(e.target.value)}>
+        {options.map((o) => <option className="bg-slate-900 text-slate-100" key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </label>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div className="border border-slate-700 bg-slate-900/60 px-2 py-2"><span className="text-slate-500">{label}: </span>{value}</div>;
+  return (
+    <div className="border border-slate-700 bg-[#081321] px-3 py-2">
+      <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{label}</div>
+      <div className="mt-1 text-base font-semibold text-slate-100">{value}</div>
+    </div>
+  );
 }
